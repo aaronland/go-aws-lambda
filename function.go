@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
-	"errors"
+	"fmt"
 	"github.com/aaronland/go-aws-session"
 	"github.com/aws/aws-sdk-go/aws"
 	aws_session "github.com/aws/aws-sdk-go/aws/session"
@@ -22,7 +22,7 @@ func NewLambdaFunctionWithDSN(dsn string, func_name string, func_type string) (*
 	sess, err := session.NewSessionWithDSN(dsn)
 
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Failed to create new session, %w", err)
 	}
 
 	return NewLambdaFunctionWithSession(sess, func_name, func_type)
@@ -50,7 +50,7 @@ func (f *LambdaFunction) Invoke(ctx context.Context, payload interface{}) (*aws_
 	enc_payload, err := json.Marshal(payload)
 
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Failed to marshal payload, %w", err)
 	}
 
 	input := &aws_lambda.InvokeInput{
@@ -66,7 +66,7 @@ func (f *LambdaFunction) Invoke(ctx context.Context, payload interface{}) (*aws_
 	rsp, err := f.service.Invoke(input)
 
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Failed to invoke function, %w", err)
 	}
 
 	if *input.InvocationType != "RequestResponse" {
@@ -78,11 +78,11 @@ func (f *LambdaFunction) Invoke(ctx context.Context, payload interface{}) (*aws_
 	result, err := base64.StdEncoding.DecodeString(enc_result)
 
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Failed to decode result, %w", err)
 	}
 
 	if *rsp.StatusCode != 200 {
-		return nil, errors.New(string(result))
+		return nil, fmt.Errorf("Unexpected status code  %d (%s)", *rsp.StatusCode, string(result))
 	}
 
 	return rsp, nil
