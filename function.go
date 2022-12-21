@@ -93,7 +93,7 @@ func (f *LambdaFunction) Invoke(ctx context.Context, payload interface{}) (*aws_
 	rsp, err := f.service.Invoke(input)
 
 	if err != nil {
-		return nil, fmt.Errorf("Failed to invoke function, %w", err)
+		return nil, fmt.Errorf("Failed to invoke function %s (%s), %w", f.func_name, f.func_type, err)
 	}
 
 	if *input.InvocationType != "RequestResponse" {
