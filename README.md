@@ -1,6 +1,6 @@
 # go-aws-lambda
 
-Opinionate Go package for doing things with AWS Lambda functions.
+Opinionated Go package for doing things with AWS Lambda functions.
 
 ## Documentation
 
