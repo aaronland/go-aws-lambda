@@ -9,12 +9,39 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	aws_session "github.com/aws/aws-sdk-go/aws/session"
 	aws_lambda "github.com/aws/aws-sdk-go/service/lambda"
+	"net/url"
 )
 
 type LambdaFunction struct {
 	service   *aws_lambda.Lambda
 	func_name string
 	func_type string
+}
+
+func NewLambdaFunction(ctx context.Context, uri string) (*LambdaFunction, error) {
+
+	u, err := url.Parse(uri)
+
+	if err != nil {
+		return nil, fmt.Errorf("Failed to parse URI, %w", err)
+	}
+
+	q := u.Query()
+
+	func_name := u.Host
+	func_type := "Event"
+
+	if q.Get("type") != "" {
+		func_type = q.Get("type")
+	}
+
+	sess, err := session.NewSession(uri)
+
+	if err != nil {
+		return nil, fmt.Errorf("Failed to create new session, %w", err)
+	}
+
+	return NewLambdaFunctionWithSession(sess, func_name, func_type)
 }
 
 func NewLambdaFunctionWithDSN(dsn string, func_name string, func_type string) (*LambdaFunction, error) {
