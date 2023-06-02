@@ -1,5 +1,9 @@
 package functionurl
 
+// https://docs.aws.amazon.com/lambda/latest/dg/urls-invocation.html
+// https://docs.aws.amazon.com/IAM/latest/UserGuide/create-signed-request.html
+// https://docs.aws.amazon.com/sdk-for-go/api/aws/signer/v4/
+
 import (
 	"context"
 	"fmt"
@@ -94,8 +98,6 @@ func (cl *Client) Post(ctx context.Context, uri string, body io.ReadSeeker) (*ht
 
 	return cl.client.Do(req)
 }
-
-// https://pkg.go.dev/github.com/aws/aws-sdk-go-v2/aws/signer/v4#Signer
 
 // SignRequest will sign 'req' and 'body' and apply the necessary AWS Signature request headers
 // to 'req'.
