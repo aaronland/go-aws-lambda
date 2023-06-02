@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/aaronland/go-aws-session v0.1.0
-	github.com/aws/aws-sdk-go v1.44.164
+	github.com/aws/aws-sdk-go v1.44.275
 )
 
 require (
