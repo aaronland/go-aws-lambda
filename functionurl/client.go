@@ -13,14 +13,17 @@ import (
 	"time"
 
 	aa_session "github.com/aaronland/go-aws-session"
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/signer/v4"
 )
 
 // Client is a struct that implements methods for signing and executing requests to AWS Lambda Function URLs.
 type Client struct {
-	signer *v4.Signer
-	client *http.Client
-	region string
+	config      *aws.Config
+	client      *http.Client
+	credentials string
+	region      string
+	ttl         time.Duration
 }
 
 // NewClient returns a new `Client` instance which is used for signing and executing requests to AWS Lambda Function
@@ -48,16 +51,16 @@ func NewClient(ctx context.Context, uri string) (*Client, error) {
 		return nil, fmt.Errorf("Failed to parse credentials, %w", err)
 	}
 
-	creds := cfg.Credentials
-
-	signer := v4.NewSigner(creds)
-
 	http_client := &http.Client{}
 
+	ttl := 1 * time.Minute
+
 	cl := &Client{
-		signer: signer,
-		region: q_region,
-		client: http_client,
+		region:      q_region,
+		client:      http_client,
+		credentials: q_credentials,
+		config:      cfg,
+		ttl:         ttl,
 	}
 
 	return cl, nil
@@ -103,12 +106,20 @@ func (cl *Client) Post(ctx context.Context, uri string, body io.ReadSeeker) (*ht
 // to 'req'.
 func (cl *Client) SignRequest(ctx context.Context, req *http.Request, body io.ReadSeeker) error {
 
+	switch cl.credentials {
+	case aa_session.AnonymousCredentialsString, aa_session.IAMCredentialsString:
+		return nil
+	default:
+		// carry on
+	}
+
+	creds := cl.config.Credentials
+	signer := v4.NewSigner(creds)
+
 	service := "lambda"
 	now := time.Now()
 
-	expires := 1 * time.Minute
-
-	_, err := cl.signer.Presign(req, body, service, cl.region, expires, now)
+	_, err := signer.Presign(req, body, service, cl.region, cl.ttl, now)
 
 	if err != nil {
 		return fmt.Errorf("Failed to sign request, %w", err)
