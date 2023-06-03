@@ -2,11 +2,15 @@ package session
 
 import (
 	"fmt"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
+	_ "log"
 	"os/user"
 	"path/filepath"
 	"strings"
+
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
+	"github.com/aws/aws-sdk-go/aws/session"
 )
 
 func NewConfigWithCredentialsAndRegion(str_creds string, region string) (*aws.Config, error) {
@@ -35,9 +39,22 @@ func NewConfigWithCredentials(str_creds string) (*aws.Config, error) {
 		creds := credentials.NewEnvCredentials()
 		cfg.WithCredentials(creds)
 
+	} else if strings.HasPrefix(str_creds, STSCredentialsPrefix) {
+
+		sess, err := session.NewSession()
+
+		if err != nil {
+			return nil, fmt.Errorf("Failed to create new session for %s provider, %w", STSCredentialsPrefix, err)
+		}
+
+		arn := strings.Replace(str_creds, STSCredentialsPrefix, "", 1)
+
+		creds := stscreds.NewCredentials(sess, arn)
+		cfg.WithCredentials(creds)
+
 	} else if strings.HasPrefix(str_creds, IAMCredentialsString) {
 
-		// assume an IAM role suffient for doing whatever
+		// Do nothing...
 
 	} else if strings.HasPrefix(str_creds, StaticCredentialsPrefix) {
 
