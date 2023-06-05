@@ -45,7 +45,7 @@ func NewClient(ctx context.Context, uri string) (*Client, error) {
 	q_credentials := q.Get("credentials")
 	q_region := q.Get("region")
 
-	cfg, err := aa_session.NewConfigWithCredentials(q_credentials)
+	cfg, err := aa_session.NewConfigWithCredentialsAndRegion(q_credentials, q_region)
 
 	if err != nil {
 		return nil, fmt.Errorf("Failed to parse credentials, %w", err)

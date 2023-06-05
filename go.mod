@@ -3,7 +3,7 @@ module github.com/aaronland/go-aws-lambda
 go 1.18
 
 require (
-	github.com/aaronland/go-aws-session v0.2.0
+	github.com/aaronland/go-aws-session v0.2.1
 	github.com/aws/aws-sdk-go v1.44.275
 )
 

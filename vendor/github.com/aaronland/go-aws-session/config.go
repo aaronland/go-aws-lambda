@@ -2,7 +2,6 @@ package session
 
 import (
 	"fmt"
-	_ "log"
 	"os/user"
 	"path/filepath"
 	"strings"
@@ -41,6 +40,9 @@ func NewConfigWithCredentials(str_creds string) (*aws.Config, error) {
 
 	} else if strings.HasPrefix(str_creds, STSCredentialsPrefix) {
 
+		// https://github.com/aws/aws-sdk-go/issues/801
+		// https://docs.aws.amazon.com/sdk-for-go/api/aws/credentials/stscreds/
+
 		sess, err := session.NewSession()
 
 		if err != nil {
@@ -49,7 +51,13 @@ func NewConfigWithCredentials(str_creds string) (*aws.Config, error) {
 
 		arn := strings.Replace(str_creds, STSCredentialsPrefix, "", 1)
 
-		creds := stscreds.NewCredentials(sess, arn)
+		session_name := filepath.Base(arn)
+
+		creds := stscreds.NewCredentials(sess, arn, func(provider *stscreds.AssumeRoleProvider) {
+			provider.RoleARN = arn
+			provider.RoleSessionName = session_name
+		})
+
 		cfg.WithCredentials(creds)
 
 	} else if strings.HasPrefix(str_creds, IAMCredentialsString) {
