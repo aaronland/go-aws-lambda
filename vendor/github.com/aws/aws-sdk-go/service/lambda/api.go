@@ -1086,6 +1086,9 @@ func (c *Lambda) DeleteEventSourceMappingRequest(input *DeleteEventSourceMapping
 //     The request throughput limit was exceeded. For more information, see Lambda
 //     quotas (https://docs.aws.amazon.com/lambda/latest/dg/gettingstarted-limits.html#api-requests).
 //
+//   - ResourceConflictException
+//     The resource already exists, or another operation is in progress.
+//
 //   - ResourceInUseException
 //     The operation conflicts with the resource's availability. For example, you
 //     tried to update an event source mapping in the CREATING state, or you tried
@@ -1158,7 +1161,8 @@ func (c *Lambda) DeleteFunctionRequest(input *DeleteFunctionInput) (req *request
 // DeleteFunction API operation for AWS Lambda.
 //
 // Deletes a Lambda function. To delete a specific function version, use the
-// Qualifier parameter. Otherwise, all versions and aliases are deleted.
+// Qualifier parameter. Otherwise, all versions and aliases are deleted. This
+// doesn't require the user to have explicit permissions for DeleteAlias.
 //
 // To delete Lambda event source mappings that invoke a function, use DeleteEventSourceMapping.
 // For Amazon Web Services and resources that invoke your function directly,
@@ -3404,6 +3408,10 @@ func (c *Lambda) InvokeRequest(input *InvokeInput) (req *request.Request, output
 //     The function is inactive and its VPC connection is no longer available. Wait
 //     for the VPC connection to reestablish and try again.
 //
+//   - RecursiveInvocationException
+//     Lambda has detected your function being invoked in a recursive loop with
+//     other Amazon Web Services resources and stopped your function's invocation.
+//
 // See also, https://docs.aws.amazon.com/goto/WebAPI/lambda-2015-03-31/Invoke
 func (c *Lambda) Invoke(input *InvokeInput) (*InvokeOutput, error) {
 	req, out := c.InvokeRequest(input)
@@ -3701,6 +3709,10 @@ func (c *Lambda) InvokeWithResponseStreamRequest(input *InvokeWithResponseStream
 //   - ResourceNotReadyException
 //     The function is inactive and its VPC connection is no longer available. Wait
 //     for the VPC connection to reestablish and try again.
+//
+//   - RecursiveInvocationException
+//     Lambda has detected your function being invoked in a recursive loop with
+//     other Amazon Web Services resources and stopped your function's invocation.
 //
 // See also, https://docs.aws.amazon.com/goto/WebAPI/lambda-2015-03-31/InvokeWithResponseStream
 func (c *Lambda) InvokeWithResponseStream(input *InvokeWithResponseStreamInput) (*InvokeWithResponseStreamOutput, error) {
@@ -8939,11 +8951,13 @@ type CreateEventSourceMappingInput struct {
 	SourceAccessConfigurations []*SourceAccessConfiguration `type:"list"`
 
 	// The position in a stream from which to start reading. Required for Amazon
-	// Kinesis, Amazon DynamoDB, and Amazon MSK Streams sources. AT_TIMESTAMP is
-	// supported only for Amazon Kinesis streams and Amazon DocumentDB.
+	// Kinesis and Amazon DynamoDB Stream event sources. AT_TIMESTAMP is supported
+	// only for Amazon Kinesis streams, Amazon DocumentDB, Amazon MSK, and self-managed
+	// Apache Kafka.
 	StartingPosition *string `type:"string" enum:"EventSourcePosition"`
 
 	// With StartingPosition set to AT_TIMESTAMP, the time from which to start reading.
+	// StartingPositionTimestamp cannot be in the future.
 	StartingPositionTimestamp *time.Time `type:"timestamp"`
 
 	// The name of the Kafka topic.
@@ -9246,9 +9260,12 @@ type CreateFunctionInput struct {
 	// The ARN of the Key Management Service (KMS) customer managed key that's used
 	// to encrypt your function's environment variables (https://docs.aws.amazon.com/lambda/latest/dg/configuration-envvars.html#configuration-envvars-encryption).
 	// When Lambda SnapStart (https://docs.aws.amazon.com/lambda/latest/dg/snapstart-security.html)
-	// is activated, this key is also used to encrypt your function's snapshot.
-	// If you don't provide a customer managed key, Lambda uses a default service
-	// key.
+	// is activated, Lambda also uses this key is to encrypt your function's snapshot.
+	// If you deploy your function using a container image, Lambda also uses this
+	// key to encrypt your function when it's deployed. Note that this is not the
+	// same key that's used to protect your container image in the Amazon Elastic
+	// Container Registry (Amazon ECR). If you don't provide a customer managed
+	// key, Lambda uses a default service key.
 	KMSKeyArn *string `type:"string"`
 
 	// A list of function layers (https://docs.aws.amazon.com/lambda/latest/dg/configuration-layers.html)
@@ -11518,7 +11535,9 @@ type EventSourceMappingConfiguration struct {
 	// age. The default value is -1, which sets the maximum age to infinite. When
 	// the value is set to infinite, Lambda never discards old records.
 	//
-	// The minimum value that can be set is 60 seconds.
+	// The minimum valid value for maximum record age is 60s. Although values less
+	// than 60 and greater than -1 fall within the parameter's absolute range, they
+	// are not allowed
 	MaximumRecordAgeInSeconds *int64 `type:"integer"`
 
 	// (Kinesis and DynamoDB Streams only) Discard records after the specified number
@@ -11550,11 +11569,13 @@ type EventSourceMappingConfiguration struct {
 	SourceAccessConfigurations []*SourceAccessConfiguration `type:"list"`
 
 	// The position in a stream from which to start reading. Required for Amazon
-	// Kinesis, Amazon DynamoDB, and Amazon MSK stream sources. AT_TIMESTAMP is
-	// supported only for Amazon Kinesis streams and Amazon DocumentDB.
+	// Kinesis and Amazon DynamoDB Stream event sources. AT_TIMESTAMP is supported
+	// only for Amazon Kinesis streams, Amazon DocumentDB, Amazon MSK, and self-managed
+	// Apache Kafka.
 	StartingPosition *string `type:"string" enum:"EventSourcePosition"`
 
 	// With StartingPosition set to AT_TIMESTAMP, the time from which to start reading.
+	// StartingPositionTimestamp cannot be in the future.
 	StartingPositionTimestamp *time.Time `type:"timestamp"`
 
 	// The state of the event source mapping. It can be one of the following: Creating,
@@ -13658,6 +13679,9 @@ type GetLayerVersionByArnOutput struct {
 	CompatibleArchitectures []*string `type:"list" enum:"Architecture"`
 
 	// The layer's compatible runtimes.
+	//
+	// The following list includes deprecated runtimes. For more information, see
+	// Runtime deprecation policy (https://docs.aws.amazon.com/lambda/latest/dg/lambda-runtimes.html#runtime-support-policy).
 	CompatibleRuntimes []*string `type:"list" enum:"Runtime"`
 
 	// Details about the layer version.
@@ -13825,6 +13849,9 @@ type GetLayerVersionOutput struct {
 	CompatibleArchitectures []*string `type:"list" enum:"Architecture"`
 
 	// The layer's compatible runtimes.
+	//
+	// The following list includes deprecated runtimes. For more information, see
+	// Runtime deprecation policy (https://docs.aws.amazon.com/lambda/latest/dg/lambda-runtimes.html#runtime-support-policy).
 	CompatibleRuntimes []*string `type:"list" enum:"Runtime"`
 
 	// Details about the layer version.
@@ -16311,6 +16338,9 @@ type LayerVersionsListItem struct {
 	CompatibleArchitectures []*string `type:"list" enum:"Architecture"`
 
 	// The layer's compatible runtimes.
+	//
+	// The following list includes deprecated runtimes. For more information, see
+	// Runtime deprecation policy (https://docs.aws.amazon.com/lambda/latest/dg/lambda-runtimes.html#runtime-support-policy).
 	CompatibleRuntimes []*string `type:"list" enum:"Runtime"`
 
 	// The date that the version was created, in ISO 8601 format. For example, 2018-11-27T15:10:45.123+0000.
@@ -17293,6 +17323,9 @@ type ListLayerVersionsInput struct {
 	CompatibleArchitecture *string `location:"querystring" locationName:"CompatibleArchitecture" type:"string" enum:"Architecture"`
 
 	// A runtime identifier. For example, go1.x.
+	//
+	// The following list includes deprecated runtimes. For more information, see
+	// Runtime deprecation policy (https://docs.aws.amazon.com/lambda/latest/dg/lambda-runtimes.html#runtime-support-policy).
 	CompatibleRuntime *string `location:"querystring" locationName:"CompatibleRuntime" type:"string" enum:"Runtime"`
 
 	// The name or Amazon Resource Name (ARN) of the layer.
@@ -17421,6 +17454,9 @@ type ListLayersInput struct {
 	CompatibleArchitecture *string `location:"querystring" locationName:"CompatibleArchitecture" type:"string" enum:"Architecture"`
 
 	// A runtime identifier. For example, go1.x.
+	//
+	// The following list includes deprecated runtimes. For more information, see
+	// Runtime deprecation policy (https://docs.aws.amazon.com/lambda/latest/dg/lambda-runtimes.html#runtime-support-policy).
 	CompatibleRuntime *string `location:"querystring" locationName:"CompatibleRuntime" type:"string" enum:"Runtime"`
 
 	// A pagination token returned by a previous call.
@@ -18218,6 +18254,9 @@ type PublishLayerVersionInput struct {
 
 	// A list of compatible function runtimes (https://docs.aws.amazon.com/lambda/latest/dg/lambda-runtimes.html).
 	// Used for filtering with ListLayers and ListLayerVersions.
+	//
+	// The following list includes deprecated runtimes. For more information, see
+	// Runtime deprecation policy (https://docs.aws.amazon.com/lambda/latest/dg/lambda-runtimes.html#runtime-support-policy).
 	CompatibleRuntimes []*string `type:"list" enum:"Runtime"`
 
 	// The function layer archive.
@@ -18329,6 +18368,9 @@ type PublishLayerVersionOutput struct {
 	CompatibleArchitectures []*string `type:"list" enum:"Architecture"`
 
 	// The layer's compatible runtimes.
+	//
+	// The following list includes deprecated runtimes. For more information, see
+	// Runtime deprecation policy (https://docs.aws.amazon.com/lambda/latest/dg/lambda-runtimes.html#runtime-support-policy).
 	CompatibleRuntimes []*string `type:"list" enum:"Runtime"`
 
 	// Details about the layer version.
@@ -19293,6 +19335,75 @@ func (s *PutRuntimeManagementConfigOutput) SetUpdateRuntimeOn(v string) *PutRunt
 	return s
 }
 
+// Lambda has detected your function being invoked in a recursive loop with
+// other Amazon Web Services resources and stopped your function's invocation.
+type RecursiveInvocationException struct {
+	_            struct{}                  `type:"structure"`
+	RespMetadata protocol.ResponseMetadata `json:"-" xml:"-"`
+
+	// The exception message.
+	Message_ *string `locationName:"Message" type:"string"`
+
+	// The exception type.
+	Type *string `type:"string"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s RecursiveInvocationException) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s RecursiveInvocationException) GoString() string {
+	return s.String()
+}
+
+func newErrorRecursiveInvocationException(v protocol.ResponseMetadata) error {
+	return &RecursiveInvocationException{
+		RespMetadata: v,
+	}
+}
+
+// Code returns the exception type name.
+func (s *RecursiveInvocationException) Code() string {
+	return "RecursiveInvocationException"
+}
+
+// Message returns the exception's message.
+func (s *RecursiveInvocationException) Message() string {
+	if s.Message_ != nil {
+		return *s.Message_
+	}
+	return ""
+}
+
+// OrigErr always returns nil, satisfies awserr.Error interface.
+func (s *RecursiveInvocationException) OrigErr() error {
+	return nil
+}
+
+func (s *RecursiveInvocationException) Error() string {
+	return fmt.Sprintf("%s: %s\n%s", s.Code(), s.Message(), s.String())
+}
+
+// Status code returns the HTTP status code for the request's response error.
+func (s *RecursiveInvocationException) StatusCode() int {
+	return s.RespMetadata.StatusCode
+}
+
+// RequestID returns the service's response RequestID for request.
+func (s *RecursiveInvocationException) RequestID() string {
+	return s.RespMetadata.RequestID
+}
+
 type RemoveLayerVersionPermissionInput struct {
 	_ struct{} `type:"structure" nopayload:"true"`
 
@@ -20162,12 +20273,9 @@ func (s *ServiceException) RequestID() string {
 	return s.RespMetadata.RequestID
 }
 
-// The function's Lambda SnapStart setting. Set ApplyOn to PublishedVersions
-// to create a snapshot of the initialized execution environment when you publish
-// a function version.
-//
-// SnapStart is supported with the java11 runtime. For more information, see
-// Improving startup performance with Lambda SnapStart (https://docs.aws.amazon.com/lambda/latest/dg/snapstart.html).
+// The function's Lambda SnapStart (https://docs.aws.amazon.com/lambda/latest/dg/snapstart.html)
+// setting. Set ApplyOn to PublishedVersions to create a snapshot of the initialized
+// execution environment when you publish a function version.
 type SnapStart struct {
 	_ struct{} `type:"structure"`
 
@@ -21715,9 +21823,12 @@ type UpdateFunctionConfigurationInput struct {
 	// The ARN of the Key Management Service (KMS) customer managed key that's used
 	// to encrypt your function's environment variables (https://docs.aws.amazon.com/lambda/latest/dg/configuration-envvars.html#configuration-envvars-encryption).
 	// When Lambda SnapStart (https://docs.aws.amazon.com/lambda/latest/dg/snapstart-security.html)
-	// is activated, this key is also used to encrypt your function's snapshot.
-	// If you don't provide a customer managed key, Lambda uses a default service
-	// key.
+	// is activated, Lambda also uses this key is to encrypt your function's snapshot.
+	// If you deploy your function using a container image, Lambda also uses this
+	// key to encrypt your function when it's deployed. Note that this is not the
+	// same key that's used to protect your container image in the Amazon Elastic
+	// Container Registry (Amazon ECR). If you don't provide a customer managed
+	// key, Lambda uses a default service key.
 	KMSKeyArn *string `type:"string"`
 
 	// A list of function layers (https://docs.aws.amazon.com/lambda/latest/dg/configuration-layers.html)
@@ -22860,6 +22971,9 @@ const (
 
 	// RuntimeJava17 is a Runtime enum value
 	RuntimeJava17 = "java17"
+
+	// RuntimeRuby32 is a Runtime enum value
+	RuntimeRuby32 = "ruby3.2"
 )
 
 // Runtime_Values returns all elements of the Runtime enum
@@ -22895,6 +23009,7 @@ func Runtime_Values() []string {
 		RuntimeNodejs18X,
 		RuntimePython310,
 		RuntimeJava17,
+		RuntimeRuby32,
 	}
 }
 

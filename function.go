@@ -80,10 +80,15 @@ func (f *LambdaFunction) Invoke(ctx context.Context, payload interface{}) (*aws_
 		return nil, fmt.Errorf("Failed to marshal payload, %w", err)
 	}
 
+	return f.InvokeWithJSON(ctx, enc_payload)
+}
+
+func (f *LambdaFunction) InvokeWithJSON(ctx context.Context, payload []byte) (*aws_lambda.InvokeOutput, error) {
+
 	input := &aws_lambda.InvokeInput{
 		FunctionName:   aws.String(f.func_name),
 		InvocationType: aws.String(f.func_type),
-		Payload:        enc_payload,
+		Payload:        payload,
 	}
 
 	if *input.InvocationType == "RequestResponse" {

@@ -11,6 +11,7 @@ import (
 func main() {
 
 	lambda_uri := flag.String("lambda-uri", "", "...")
+	json := flag.Bool("json", false, "...")
 
 	flag.Parse()
 
@@ -24,7 +25,11 @@ func main() {
 
 	payload := strings.Join(flag.Args(), " ")
 
-	_, err = f.Invoke(ctx, payload)
+	if *json {
+		_, err = f.InvokeWithJSON(ctx, []byte(payload))
+	} else {
+		_, err = f.Invoke(ctx, payload)
+	}
 
 	if err != nil {
 		log.Fatalf("Failed to invoke function, %v", err)
