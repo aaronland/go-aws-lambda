@@ -3,9 +3,10 @@ package main
 import (
 	"context"
 	"flag"
-	"github.com/aaronland/go-aws-lambda"
 	"log"
 	"strings"
+
+	"github.com/aaronland/go-aws-lambda"
 )
 
 func main() {

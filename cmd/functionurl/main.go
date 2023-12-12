@@ -25,7 +25,7 @@ func main() {
 	cl, err := functionurl.NewClient(ctx, *client_uri)
 
 	if err != nil {
-		log.Fatalf("Failed to create new function URL client, %w", err)
+		log.Fatalf("Failed to create new function URL client, %v", err)
 	}
 
 	for _, uri := range flag.Args() {
