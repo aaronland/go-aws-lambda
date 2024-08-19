@@ -12,14 +12,14 @@ import (
 	"net/url"
 	"time"
 
-	aa_session "github.com/aaronland/go-aws-session"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/signer/v4"
+	"github.com/aaronland/go-aws-auth"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/aws/signer/v4"
 )
 
 // Client is a struct that implements methods for signing and executing requests to AWS Lambda Function URLs.
 type Client struct {
-	config      *aws.Config
+	config      aws.Config
 	client      *http.Client
 	credentials string
 	region      string
@@ -45,7 +45,8 @@ func NewClient(ctx context.Context, uri string) (*Client, error) {
 	q_credentials := q.Get("credentials")
 	q_region := q.Get("region")
 
-	cfg, err := aa_session.NewConfigWithCredentialsAndRegion(q_credentials, q_region)
+	cfg_uri := fmt.Sprintf("aws://%s?credentials=%s", q_region, q_credentials)
+	cfg, err := auth.NewConfig(ctx, cfg_uri)
 
 	if err != nil {
 		return nil, fmt.Errorf("Failed to parse credentials, %w", err)
@@ -107,7 +108,7 @@ func (cl *Client) Post(ctx context.Context, uri string, body io.ReadSeeker) (*ht
 func (cl *Client) SignRequest(ctx context.Context, req *http.Request, body io.ReadSeeker) error {
 
 	switch cl.credentials {
-	case aa_session.AnonymousCredentialsString, aa_session.IAMCredentialsString:
+	case auth.AnonymousCredentialsString, auth.IAMCredentialsString:
 		return nil
 	default:
 		// carry on

@@ -6,15 +6,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"strings"
 
-	"github.com/aaronland/go-aws-session"
-	"github.com/aws/aws-sdk-go/aws"
-	aws_session "github.com/aws/aws-sdk-go/aws/session"
-	aws_lambda "github.com/aws/aws-sdk-go/service/lambda"
+	"github.com/aaronland/go-aws-auth"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	aws_lambda "github.com/aws/aws-sdk-go-v2/service/lambda"
+	aws_lambda_types "github.com/aws/aws-sdk-go-v2/service/lambda/types"
 )
 
 type LambdaFunction struct {
-	service   *aws_lambda.Lambda
+	client    *aws_lambda.Client
 	func_name string
 	func_type string
 }
@@ -29,6 +30,13 @@ func NewLambdaFunction(ctx context.Context, uri string) (*LambdaFunction, error)
 
 	q := u.Query()
 
+	cfg_uri := fmt.Sprintf("aws://%s?credentials=%s", q.Get("region"), q.Get("credentials"))
+	cfg, err := auth.NewConfig(ctx, cfg_uri)
+
+	if err != nil {
+		return nil, fmt.Errorf("Failed to derive AWS config, %w", err)
+	}
+
 	func_name := u.Host
 	func_type := "Event"
 
@@ -36,36 +44,14 @@ func NewLambdaFunction(ctx context.Context, uri string) (*LambdaFunction, error)
 		func_type = q.Get("type")
 	}
 
-	sess, err := session.NewSession(uri)
+	cl := aws_lambda.NewFromConfig(cfg)
 
 	if err != nil {
 		return nil, fmt.Errorf("Failed to create new session, %w", err)
 	}
-
-	return NewLambdaFunctionWithSession(sess, func_name, func_type)
-}
-
-func NewLambdaFunctionWithDSN(dsn string, func_name string, func_type string) (*LambdaFunction, error) {
-
-	sess, err := session.NewSessionWithDSN(dsn)
-
-	if err != nil {
-		return nil, fmt.Errorf("Failed to create new session, %w", err)
-	}
-
-	return NewLambdaFunctionWithSession(sess, func_name, func_type)
-}
-
-func NewLambdaFunctionWithSession(sess *aws_session.Session, func_name string, func_type string) (*LambdaFunction, error) {
-
-	svc := aws_lambda.New(sess)
-	return NewLambdaFunctionWithService(svc, func_name, func_type)
-}
-
-func NewLambdaFunctionWithService(svc *aws_lambda.Lambda, func_name string, func_type string) (*LambdaFunction, error) {
 
 	f := &LambdaFunction{
-		service:   svc,
+		client:    cl,
 		func_name: func_name,
 		func_type: func_type,
 	}
@@ -86,23 +72,41 @@ func (f *LambdaFunction) Invoke(ctx context.Context, payload interface{}) (*aws_
 
 func (f *LambdaFunction) InvokeWithJSON(ctx context.Context, payload []byte) (*aws_lambda.InvokeOutput, error) {
 
+	var func_type aws_lambda_types.InvocationType
+	var log_type aws_lambda_types.LogType
+
+	switch strings.ToUpper(f.func_type) {
+	case "EVENT":
+		func_type = aws_lambda_types.InvocationTypeEvent
+	case "REQUEST", "REQUESTRESPONSE":
+		func_type = aws_lambda_types.InvocationTypeRequestResponse
+	case "DRYRUN":
+		func_type = aws_lambda_types.InvocationTypeDryRun
+	default:
+		return nil, fmt.Errorf("Invalid or unsupported invocation type")
+	}
+
+	switch func_type {
+	case aws_lambda_types.InvocationTypeRequestResponse:
+		log_type = aws_lambda_types.LogTypeTail
+	default:
+		log_type = aws_lambda_types.LogTypeNone
+	}
+
 	input := &aws_lambda.InvokeInput{
 		FunctionName:   aws.String(f.func_name),
-		InvocationType: aws.String(f.func_type),
+		InvocationType: func_type,
+		LogType:        log_type,
 		Payload:        payload,
 	}
 
-	if *input.InvocationType == "RequestResponse" {
-		input.LogType = aws.String("Tail")
-	}
-
-	rsp, err := f.service.Invoke(input)
+	rsp, err := f.client.Invoke(ctx, input)
 
 	if err != nil {
 		return nil, fmt.Errorf("Failed to invoke function %s (%s), %w", f.func_name, f.func_type, err)
 	}
 
-	if *input.InvocationType != "RequestResponse" {
+	if input.InvocationType != aws_lambda_types.InvocationTypeRequestResponse {
 		return nil, nil
 	}
 
@@ -114,8 +118,8 @@ func (f *LambdaFunction) InvokeWithJSON(ctx context.Context, payload []byte) (*a
 		return nil, fmt.Errorf("Failed to decode result, %w", err)
 	}
 
-	if *rsp.StatusCode != 200 {
-		return nil, fmt.Errorf("Unexpected status code  %d (%s)", *rsp.StatusCode, string(result))
+	if rsp.StatusCode != 200 {
+		return nil, fmt.Errorf("Unexpected status code  %d (%s)", rsp.StatusCode, string(result))
 	}
 
 	return rsp, nil
