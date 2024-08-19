@@ -6,10 +6,12 @@ package functionurl
 
 import (
 	"context"
+	"crypto/sha256"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
+	"strconv"
 	"time"
 
 	"github.com/aaronland/go-aws-auth"
@@ -114,13 +116,32 @@ func (cl *Client) SignRequest(ctx context.Context, req *http.Request, body io.Re
 		// carry on
 	}
 
-	creds := cl.config.Credentials
-	signer := v4.NewSigner(creds)
+	creds, err := cl.config.Credentials.Retrieve(ctx)
+
+	if err != nil {
+		return err
+	}
+
+	h := sha256.New()
+	_, err = io.Copy(h, body)
+
+	if err != nil {
+		return fmt.Errorf("Failed to copy body to hash, %w", err)
+	}
+
+	payload_hash := fmt.Sprintf("%x", h.Sum(nil))
+
+	signer := v4.NewSigner()
 
 	service := "lambda"
 	now := time.Now()
 
-	_, err := signer.Presign(req, body, service, cl.region, cl.ttl, now)
+	expires := cl.ttl
+	query := req.URL.Query()
+	query.Set("X-Amz-Expires", strconv.FormatInt(int64(expires/time.Second), 10))
+	req.URL.RawQuery = query.Encode()
+
+	_, _, err = signer.PresignHTTP(ctx, creds, req, payload_hash, service, cl.region, now)
 
 	if err != nil {
 		return fmt.Errorf("Failed to sign request, %w", err)
