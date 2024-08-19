@@ -3,7 +3,7 @@ module github.com/aaronland/go-aws-lambda
 go 1.22.2
 
 require (
-	github.com/aaronland/go-aws-auth v1.6.3
+	github.com/aaronland/go-aws-auth v1.6.4
 	github.com/aws/aws-sdk-go-v2 v1.30.4
 	github.com/aws/aws-sdk-go-v2/service/lambda v1.57.0
 )

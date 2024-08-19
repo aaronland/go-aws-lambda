@@ -1,5 +1,5 @@
-github.com/aaronland/go-aws-auth v1.6.3 h1:AL5Q3nBRB+zeAz9Br8KRO8Y5wpeb2SaB/169CHlP9v8=
-github.com/aaronland/go-aws-auth v1.6.3/go.mod h1:+t/vLj8Uq/Sjf13LQOJdgP2GG+/c+dBxQxA7wYad4bQ=
+github.com/aaronland/go-aws-auth v1.6.4 h1:RQxiSm9b7YAkDNSoea3RNA90GvAPwTmQm/ji/hnhxb4=
+github.com/aaronland/go-aws-auth v1.6.4/go.mod h1:+t/vLj8Uq/Sjf13LQOJdgP2GG+/c+dBxQxA7wYad4bQ=
 github.com/aws/aws-sdk-go-v2 v1.30.4 h1:frhcagrVNrzmT95RJImMHgabt99vkXGslubDaDagTk8=
 github.com/aws/aws-sdk-go-v2 v1.30.4/go.mod h1:CT+ZPWXbYrci8chcARI3OmI/qgd+f6WtuLOoaIA8PR0=
 github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.6.4 h1:70PVAiL15/aBMh5LThwgXdSQorVr91L127ttckI9QQU=
