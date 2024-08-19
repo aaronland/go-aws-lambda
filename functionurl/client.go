@@ -6,20 +6,22 @@ package functionurl
 
 import (
 	"context"
+	"crypto/sha256"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
+	"strconv"
 	"time"
 
-	aa_session "github.com/aaronland/go-aws-session"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/signer/v4"
+	"github.com/aaronland/go-aws-auth"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/aws/signer/v4"
 )
 
 // Client is a struct that implements methods for signing and executing requests to AWS Lambda Function URLs.
 type Client struct {
-	config      *aws.Config
+	config      aws.Config
 	client      *http.Client
 	credentials string
 	region      string
@@ -45,7 +47,8 @@ func NewClient(ctx context.Context, uri string) (*Client, error) {
 	q_credentials := q.Get("credentials")
 	q_region := q.Get("region")
 
-	cfg, err := aa_session.NewConfigWithCredentialsAndRegion(q_credentials, q_region)
+	cfg_uri := fmt.Sprintf("aws://%s?credentials=%s", q_region, q_credentials)
+	cfg, err := auth.NewConfig(ctx, cfg_uri)
 
 	if err != nil {
 		return nil, fmt.Errorf("Failed to parse credentials, %w", err)
@@ -107,19 +110,48 @@ func (cl *Client) Post(ctx context.Context, uri string, body io.ReadSeeker) (*ht
 func (cl *Client) SignRequest(ctx context.Context, req *http.Request, body io.ReadSeeker) error {
 
 	switch cl.credentials {
-	case aa_session.AnonymousCredentialsString, aa_session.IAMCredentialsString:
+	case auth.AnonymousCredentialsString, auth.IAMCredentialsString:
 		return nil
 	default:
 		// carry on
 	}
 
-	creds := cl.config.Credentials
-	signer := v4.NewSigner(creds)
+	creds, err := cl.config.Credentials.Retrieve(ctx)
+
+	if err != nil {
+		return err
+	}
+
+	var payload_hash string
+
+	if body != nil {
+		
+		h := sha256.New()
+		_, err = io.Copy(h, body)
+		
+		if err != nil {
+			return fmt.Errorf("Failed to copy body to hash, %w", err)
+		}
+		
+		payload_hash = fmt.Sprintf("%x", h.Sum(nil))
+		
+	} else {
+
+		sum := sha256.Sum256([]byte(""))
+		payload_hash = fmt.Sprintf("%x", sum)
+	}
+	
+	signer := v4.NewSigner()
 
 	service := "lambda"
 	now := time.Now()
 
-	_, err := signer.Presign(req, body, service, cl.region, cl.ttl, now)
+	expires := cl.ttl
+	query := req.URL.Query()
+	query.Set("X-Amz-Expires", strconv.FormatInt(int64(expires/time.Second), 10))
+	req.URL.RawQuery = query.Encode()
+
+	_, _, err = signer.PresignHTTP(ctx, creds, req, payload_hash, service, cl.region, now)
 
 	if err != nil {
 		return fmt.Errorf("Failed to sign request, %w", err)
