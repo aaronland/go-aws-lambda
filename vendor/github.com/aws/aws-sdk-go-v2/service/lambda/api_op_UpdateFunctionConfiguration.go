@@ -26,7 +26,7 @@ import (
 // only the unpublished version.
 //
 // To configure function concurrency, use PutFunctionConcurrency. To grant invoke permissions to an
-// Amazon Web Services account or Amazon Web Service, use AddPermission.
+// Amazon Web Services account or Amazon Web Services service, use AddPermission.
 //
 // [Lambda function states]: https://docs.aws.amazon.com/lambda/latest/dg/functions-states.html
 func (c *Client) UpdateFunctionConfiguration(ctx context.Context, params *UpdateFunctionConfigurationInput, optFns ...func(*Options)) (*UpdateFunctionConfigurationOutput, error) {
@@ -376,6 +376,9 @@ func (c *Client) addOperationUpdateFunctionConfigurationMiddlewares(stack *middl
 	if err = addRecordResponseTiming(stack); err != nil {
 		return err
 	}
+	if err = addSpanRetryLoop(stack, options); err != nil {
+		return err
+	}
 	if err = addClientUserAgent(stack, options); err != nil {
 		return err
 	}
@@ -413,6 +416,18 @@ func (c *Client) addOperationUpdateFunctionConfigurationMiddlewares(stack *middl
 		return err
 	}
 	if err = addDisableHTTPSMiddleware(stack, options); err != nil {
+		return err
+	}
+	if err = addSpanInitializeStart(stack); err != nil {
+		return err
+	}
+	if err = addSpanInitializeEnd(stack); err != nil {
+		return err
+	}
+	if err = addSpanBuildRequestStart(stack); err != nil {
+		return err
+	}
+	if err = addSpanBuildRequestEnd(stack); err != nil {
 		return err
 	}
 	return nil
