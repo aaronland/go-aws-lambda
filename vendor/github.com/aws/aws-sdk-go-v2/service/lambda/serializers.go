@@ -643,9 +643,23 @@ func awsRestjson1_serializeOpDocumentCreateEventSourceMappingInput(v *CreateEven
 		ok.Integer(*v.MaximumRetryAttempts)
 	}
 
+	if v.MetricsConfig != nil {
+		ok := object.Key("MetricsConfig")
+		if err := awsRestjson1_serializeDocumentEventSourceMappingMetricsConfig(v.MetricsConfig, ok); err != nil {
+			return err
+		}
+	}
+
 	if v.ParallelizationFactor != nil {
 		ok := object.Key("ParallelizationFactor")
 		ok.Integer(*v.ParallelizationFactor)
+	}
+
+	if v.ProvisionedPollerConfig != nil {
+		ok := object.Key("ProvisionedPollerConfig")
+		if err := awsRestjson1_serializeDocumentProvisionedPollerConfig(v.ProvisionedPollerConfig, ok); err != nil {
+			return err
+		}
 	}
 
 	if v.Queues != nil {
@@ -3106,7 +3120,7 @@ func awsRestjson1_serializeOpHttpBindingsInvokeInput(v *InvokeInput, encoder *ht
 		return fmt.Errorf("unsupported serialization of nil %T", v)
 	}
 
-	if v.ClientContext != nil && len(*v.ClientContext) > 0 {
+	if v.ClientContext != nil {
 		locationName := "X-Amz-Client-Context"
 		encoder.SetHeader(locationName).String(*v.ClientContext)
 	}
@@ -3291,7 +3305,7 @@ func awsRestjson1_serializeOpHttpBindingsInvokeWithResponseStreamInput(v *Invoke
 		return fmt.Errorf("unsupported serialization of nil %T", v)
 	}
 
-	if v.ClientContext != nil && len(*v.ClientContext) > 0 {
+	if v.ClientContext != nil {
 		locationName := "X-Amz-Client-Context"
 		encoder.SetHeader(locationName).String(*v.ClientContext)
 	}
@@ -5815,9 +5829,23 @@ func awsRestjson1_serializeOpDocumentUpdateEventSourceMappingInput(v *UpdateEven
 		ok.Integer(*v.MaximumRetryAttempts)
 	}
 
+	if v.MetricsConfig != nil {
+		ok := object.Key("MetricsConfig")
+		if err := awsRestjson1_serializeDocumentEventSourceMappingMetricsConfig(v.MetricsConfig, ok); err != nil {
+			return err
+		}
+	}
+
 	if v.ParallelizationFactor != nil {
 		ok := object.Key("ParallelizationFactor")
 		ok.Integer(*v.ParallelizationFactor)
+	}
+
+	if v.ProvisionedPollerConfig != nil {
+		ok := object.Key("ProvisionedPollerConfig")
+		if err := awsRestjson1_serializeDocumentProvisionedPollerConfig(v.ProvisionedPollerConfig, ok); err != nil {
+			return err
+		}
 	}
 
 	if v.ScalingConfig != nil {
@@ -5968,6 +5996,11 @@ func awsRestjson1_serializeOpDocumentUpdateFunctionCodeInput(v *UpdateFunctionCo
 	if v.S3ObjectVersion != nil {
 		ok := object.Key("S3ObjectVersion")
 		ok.String(*v.S3ObjectVersion)
+	}
+
+	if v.SourceKMSKeyArn != nil {
+		ok := object.Key("SourceKMSKeyArn")
+		ok.String(*v.SourceKMSKeyArn)
 	}
 
 	if v.ZipFile != nil {
@@ -6692,6 +6725,31 @@ func awsRestjson1_serializeDocumentEphemeralStorage(v *types.EphemeralStorage, v
 	return nil
 }
 
+func awsRestjson1_serializeDocumentEventSourceMappingMetricList(v []types.EventSourceMappingMetric, value smithyjson.Value) error {
+	array := value.Array()
+	defer array.Close()
+
+	for i := range v {
+		av := array.Value()
+		av.String(string(v[i]))
+	}
+	return nil
+}
+
+func awsRestjson1_serializeDocumentEventSourceMappingMetricsConfig(v *types.EventSourceMappingMetricsConfig, value smithyjson.Value) error {
+	object := value.Object()
+	defer object.Close()
+
+	if v.Metrics != nil {
+		ok := object.Key("Metrics")
+		if err := awsRestjson1_serializeDocumentEventSourceMappingMetricList(v.Metrics, ok); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func awsRestjson1_serializeDocumentFileSystemConfig(v *types.FileSystemConfig, value smithyjson.Value) error {
 	object := value.Object()
 	defer object.Close()
@@ -6783,6 +6841,11 @@ func awsRestjson1_serializeDocumentFunctionCode(v *types.FunctionCode, value smi
 	if v.S3ObjectVersion != nil {
 		ok := object.Key("S3ObjectVersion")
 		ok.String(*v.S3ObjectVersion)
+	}
+
+	if v.SourceKMSKeyArn != nil {
+		ok := object.Key("SourceKMSKeyArn")
+		ok.String(*v.SourceKMSKeyArn)
 	}
 
 	if v.ZipFile != nil {
@@ -6925,6 +6988,23 @@ func awsRestjson1_serializeDocumentOnSuccess(v *types.OnSuccess, value smithyjso
 	if v.Destination != nil {
 		ok := object.Key("Destination")
 		ok.String(*v.Destination)
+	}
+
+	return nil
+}
+
+func awsRestjson1_serializeDocumentProvisionedPollerConfig(v *types.ProvisionedPollerConfig, value smithyjson.Value) error {
+	object := value.Object()
+	defer object.Close()
+
+	if v.MaximumPollers != nil {
+		ok := object.Key("MaximumPollers")
+		ok.Integer(*v.MaximumPollers)
+	}
+
+	if v.MinimumPollers != nil {
+		ok := object.Key("MinimumPollers")
+		ok.Integer(*v.MinimumPollers)
 	}
 
 	return nil
