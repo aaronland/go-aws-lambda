@@ -1,3 +1,28 @@
+# v1.73.0 (2025-07-22)
+
+* **Feature**: This release migrated the model to Smithy keeping all features unchanged.
+
+# v1.72.1 (2025-07-19)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.72.0 (2025-06-19)
+
+* **Feature**: Support Schema Registry feature for Kafka Event Source Mapping. Customers can now configure a Schema Registry to enable schema validation and filtering for Avro, Protobuf, and JSON-formatted events in Lambda for Kafka Event Source.
+
+# v1.71.5 (2025-06-17)
+
+* **Dependency Update**: Update to smithy-go v1.22.4.
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.71.4 (2025-06-10)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.71.3 (2025-06-06)
+
+* No change notes available for this release.
+
 # v1.71.2 (2025-04-10)
 
 * No change notes available for this release.
