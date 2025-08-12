@@ -2,6 +2,10 @@
 
 Opinionated Go package for doing things with AWS Lambda functions.
 
+## Deprecation notice
+
+This package has been deprecated and will no longer be updated. It has been replaced by the [aaronland/go-aws](https://github.com/aaronland/go-aws) package.
+
 ## Documentation
 
 Documentation is incomplete at this time.
